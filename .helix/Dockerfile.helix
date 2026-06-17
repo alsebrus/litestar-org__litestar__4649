@@ -1,0 +1,30 @@
+FROM docker.io/python:3.13-slim-bookworm
+
+WORKDIR /app
+
+# System dependencies: git for fetching git-based deps, build tools for psycopg2
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# Copy all project files (needed for hatchling build)
+COPY pyproject.toml uv.lock ./
+COPY docs/PYPI_README.md docs/PYPI_README.md
+COPY litestar/ litestar/
+
+# Install project + test dependencies (skip docs/linting to keep image lean)
+RUN uv sync --locked --no-group docs --no-group linting 2>&1
+
+# Copy test files
+COPY tests/ tests/
+
+# Set PYTHONPATH so imports work correctly
+ENV PYTHONPATH=/app
+
+# Default command: run unit tests
+CMD ["uv", "run", "pytest", "-x", "-v", "tests/unit/"]
