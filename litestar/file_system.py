@@ -494,6 +494,11 @@ _MTIME_KEYS: Final = (
     "timestamp",
 )
 
+_MTIME_STRING_PARSERS: Final = [
+    lambda s: datetime.fromisoformat(s.replace("Z", "+00:00")).timestamp(),
+    lambda s: datetime.strptime(s, "%a, %d %b %Y %H:%M:%S %Z").timestamp(),  # noqa: DTZ007
+]
+
 
 def get_fsspec_mtime_equivalent(info: dict[str, Any]) -> float | None:
     """Return the 'mtime' or equivalent for different fsspec implementations, since they
@@ -508,6 +513,10 @@ def get_fsspec_mtime_equivalent(info: dict[str, Any]) -> float | None:
     if isinstance(mtime, datetime):
         return mtime.timestamp()
     if isinstance(mtime, str):
-        return datetime.fromisoformat(mtime.replace("Z", "+00:00")).timestamp()
+        for parser in _MTIME_STRING_PARSERS:
+            try:
+                return parser(mtime)
+            except (ValueError, TypeError):
+                continue
 
-    raise ValueError(f"Unsupported mtime-type value type {type(mtime)!r}")
+    raise ValueError(f"Unsupported mtime-type value type or value {mtime!r}")
