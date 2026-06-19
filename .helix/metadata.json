@@ -1,0 +1,30 @@
+[
+  {
+    "instance_id": "litestar-org__litestar__4649",
+    "task_title": "Python 3.14 compatibility: fsspec mtime parsing, sentinel check, and TypedDict NotRequired fields",
+    "problem_statement": "The Litestar ASGI framework needs to be updated for compatibility with Python 3.14. Several issues have been identified that prevent the framework from working correctly on the latest Python release:\n\n1. **`litestar/file_system.py` — `get_fsspec_mtime_equivalent` lacks fallback date parsing**: The function currently assumes all string mtime values from fsspec are in ISO 8601 format and calls `datetime.fromisoformat()` without any fallback. In practice, fsspec can return dates in different formats such as RFC 2822 (e.g., 'Thu, 01 Jan 2025 12:00:00 GMT'). The function should try multiple format parsers before raising a ValueError, falling back gracefully when the first parser fails.\n\n2. **`litestar/_openapi/parameters.py` — `get_layered_parameter` has incorrect sentinel check**: When resolving parameter annotations, the method compares the entire `field_definition` object against the `Empty` sentinel rather than comparing `field_definition.annotation`. Since `field_definition` is always a `FieldDefinition` instance (never the `Empty` sentinel), this check is always True and the annotation fallback to `layer_field.annotation` is never triggered. The sentinel check should be on `field_definition.annotation` to correctly fall back when no annotation is explicitly set.\n\n3. **`litestar/types/asgi_types.py` — `LifeSpanScope` TypedDict missing NotRequired fields**: The `LifeSpanScope` TypedDict is missing `litestar_app` and `state` fields. These fields exist in the runtime lifespan scope but are not part of the ASGI specification, so they should be declared as optional via `NotRequired`.\n\nPlease implement the fixes described above. The existing test suite should continue to pass after your changes.",
+    "problem_statement_variant": "The Litestar ASGI framework needs to be updated for compatibility with Python 3.14's stricter TypedDict validation and improved datetime parsing behavior.\n\nFix the following issues in the codebase:\n\n- `litestar/file_system.py`: Make `get_fsspec_mtime_equivalent` resilient to non-ISO date strings from fsspec by adding a fallback parser for RFC 2822 formatted dates.\n- `litestar/_openapi/parameters.py`: Fix the sentinel comparison in `get_layered_parameter` so that it checks `field_definition.annotation` instead of `field_definition` against the `Empty` sentinel.\n- `litestar/types/asgi_types.py`: Add `litestar_app` and `state` as `NotRequired` fields to the `LifeSpanScope` TypedDict.\n\nNo other files should be modified. All existing tests must continue to pass.",
+    "hints": [
+      "The `Empty` sentinel is exported from `litestar.types` — it's used throughout the codebase to indicate 'no value provided'.",
+      "For the mtime parsing, the `datetime` class is already imported at the top of `file_system.py`.",
+      "The `NotRequired` type is available from the `typing` module (Python 3.11+) or from `typing_extensions`."
+    ],
+    "repo": "litestar-org__litestar__4649",
+    "repo_path_or_url": "https://github.com/alsebrus/litestar-org__litestar__4649",
+    "FAIL_TO_PASS": "tests/unit/test_f2p_fsspec_mtime.py",
+    "PASS_TO_PASS": "tests/unit/test_utils/test_sequence.py,tests/unit/test_utils/test_version.py,tests/unit/test_utils/test_path.py,tests/unit/test_datastructures/test_cookie.py,tests/unit/test_datastructures/test_state.py",
+    "language": "python",
+    "docker_file": ".helix/Dockerfile.helix",
+    "run_script": ".helix/run-tests-eval.sh",
+    "task_type": "general",
+    "task_category": "compatibility",
+    "repo_category": "web-framework",
+    "version": "3.0.0b0",
+    "container_mem": "2048",
+    "container_memswap": "4096",
+    "container_network_needed": false,
+    "base_commit": "a6766c6c1651931df9d9947eb596951d5e343fbe",
+    "golden_commit": "469a3372ced297363e0ac0836b1b67c6d35863b9",
+    "test_commit": "17969fae0f178e150dd697485a30b2d8229a749d"
+  }
+]
